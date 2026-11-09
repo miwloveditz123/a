@@ -69,9 +69,12 @@ local function stripPart(part)
         if part:IsA("MeshPart") then
             pcall(function() part.TextureID = "" end)
         end
+        -- hapus MaterialVariant PBR (sumber kilap custom)
+        pcall(function() part.MaterialVariant = "" end)
         pcall(function()
             if part.Material ~= Enum.Material.Neon then
-                part.Material = Enum.Material.SmoothPlastic
+                -- Plastic = matte (SmoothPlastic justru sangat mengkilap)
+                part.Material = Enum.Material.Plastic
             end
         end)
     end
@@ -133,6 +136,8 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.5)
+        -- game sering reset Lighting (siang/malam) -> paksa ulang terus
+        pcall(applyLighting)
         if #queue > 0 then
             local items = queue
             queue, queued = {}, {}
@@ -269,7 +274,7 @@ note.BackgroundTransparency = 1
 note.Position = UDim2.fromOffset(12, 166)
 note.Size = UDim2.new(1, -24, 0, 70)
 note.Font = Enum.Font.Code
-note.Text = "Texture/Decal/SurfaceAppearance dihapus.\nShadow part dimatikan.\nFog + Atmosphere dihapus.\nReflectance & specular = 0.\nPart baru otomatis diproses."
+note.Text = "Texture/Decal/SurfaceAppearance dihapus.\nMaterial -> Plastic (matte, bukan SmoothPlastic).\nMaterialVariant PBR dikosongkan.\nShadow, fog, reflectance & specular dimatikan.\nPart baru otomatis diproses."
 note.TextColor3 = Color3.fromRGB(130, 120, 150)
 note.TextSize = 10
 note.TextXAlignment = Enum.TextXAlignment.Left
