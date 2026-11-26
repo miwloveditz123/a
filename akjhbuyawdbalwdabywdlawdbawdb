@@ -2327,18 +2327,20 @@ local Library = { } do
         local H = Library.WindowHeight
         local TopH = 51
         local Gap = 10
-        local RailH = 50
+        local RailW = 340        -- [MODIFIED] rail jadi lebar (horizontal)
+        local RailH = 60         -- [MODIFIED] rail jadi pendek (horizontal)
         local SubW = 260
         local SubH = 50
-        local MainX = 0
-        local SubX = math.floor((W - SubW) / 2)
+        local MainX = 0          -- [MODIFIED] main mulai dari x=0
+        local RailY = H + Gap    -- [MODIFIED] rail di bawah main
+        local SubX = math.floor((W - SubW) / 2)  -- [MODIFIED] subbar di tengah main
         local SubY = H - math.floor(SubH / 2)
-        local RailY = SubY + SubH + Gap
-        local RootW = W
-        local RootH = RailY + RailH
+        local RootW = W          -- [MODIFIED] root selebar main
+        local RootH = RailY + RailH  -- [MODIFIED] root setinggi main + rail
+        local RailX = 0          -- [MODIFIED] rail di kiri
         local ColW = math.floor((W - 46) / 2)
         local Col2X = ColW + 16
-        local SubCenterX = math.floor(W / 2)
+        local SubCenterX = MainX + math.floor(W / 2)
         local MaxSubW = W - 120
 
         local Window = {
@@ -2351,7 +2353,6 @@ local Library = { } do
             ContentH = H - 96,
             ColW = ColW,
             Col2X = Col2X,
-            RailH = RailH,
             Items = { }
         }
 
@@ -2385,9 +2386,8 @@ local Library = { } do
 
         Items.Rail = MakeFrame({
             Parent = Items.Root.Instance,
-            Anchor = Vector2.new(0.5, 0),
-            Pos = UDim2.fromOffset(math.floor(W / 2), RailY),
-            Size = UDim2.fromOffset(120, RailH),
+            Pos = UDim2.fromOffset(RailX, RailY),
+            Size = UDim2.fromOffset(RailW, RailH),
             Color = "Section",
             Round = 10,
             Z = 1
@@ -3005,32 +3005,15 @@ local Library = { } do
             )
         end
 
-        function Window:LayoutRail(Instant)
-            local Info = Instant and TweenInfo.new(0)
-            or TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+           -- [MODIFIED] Rail horizontal: lebar menyesuaikan jumlah tab, tinggi tetap
+        function Window:LayoutRail()
+            local Count = #Window.Tabs
+            local NewW = Count > 0 and (50 * Count + 10) or RailW
+            local CenterX = math.floor((W - NewW) / 2)
 
-            local PadX = 8
-            local TabGap = 6
-            local X = PadX
-
-            for _, Tab in Window.Tabs do
-                local Width = Tab.Active and Tab.ExpandedW or Tab.CollapsedW
-
-                Library:Tween({
-                    Position = UDim2.fromOffset(X, 5),
-                    Size = UDim2.fromOffset(Width, 40)
-                }, Info, Tab.Items.Row.Instance)
-
-                X += Width + TabGap
-            end
-
-            local Total = math.max(X - TabGap + PadX, 56)
-
-            Library:Tween({
-                Size = UDim2.fromOffset(Total, RailH)
-            }, Info, Items.Rail.Instance)
+            Items.Rail.Instance.Size = UDim2.fromOffset(NewW, RailH)
+            Items.Rail.Instance.Position = UDim2.fromOffset(CenterX, RailY)
         end
-
         function Window:FitSubBar(Instant)
             local Tab = Window.Current
             if not Tab or not Tab.SubLayout then return end
@@ -3188,16 +3171,14 @@ local Library = { } do
         }
 
         local Items = { }
-
-        local TextW = math.ceil(MeasureText(Tab.Name, 15, 300, UiFont).X)
-
-        Tab.CollapsedW = 40
-        Tab.ExpandedW = 36 + TextW + 14
+        local Index = #Window.Tabs
+        -- [MODIFIED] tab tersusun horizontal
+        local RowX = 10 + Index * 50
 
         Items.Row = MakeFrame({
             Parent = Window.Items.Rail.Instance,
-            Pos = UDim2.fromOffset(8, 5),
-            Size = UDim2.fromOffset(Tab.CollapsedW, 40),
+            Pos = UDim2.fromOffset(RowX, 10),   -- [MODIFIED] X berubah, Y tetap 10
+            Size = UDim2.fromOffset(40, 40),
             Color = "Element",
             Round = 8,
             Clip = true,
@@ -3206,40 +3187,35 @@ local Library = { } do
 
         SetRest(Items.Row.Instance, "BackgroundTransparency", 1)
 
+               Items.Bar = MakeFrame({
+            Parent = Window.Items.Rail.Instance,
+            Anchor = Vector2.new(0.5, 0),                -- [MODIFIED] anchor horizontal
+            Pos = UDim2.new(0, RowX + 20, 0, 0),         -- [MODIFIED] di atas row, tengah X
+            Size = UDim2.fromOffset(0, 3),               -- [MODIFIED] bar horizontal (lebar 0 awal)
+            Color = "Accent",
+            Round = 4,
+            Z = 4
+        })
+
+        Items.BarShadow = MakeAccentShadow(
+            Items.Bar.Instance,
+            UDim2.fromOffset(15, 3),   -- [MODIFIED] shadow horizontal
+            UDim.new(0, 10),
+            0
+        )
+
+        if Items.BarShadow then
+            SetRest(Items.BarShadow, "Transparency", 1)
+        end
+
         Items.Icon = MakeImage({
             Parent = Items.Row.Instance,
             Icon = Tab.Icon,
-            Anchor = Vector2.new(0, 0.5),
-            Pos = UDim2.new(0, 10, 0.5, 0),
+            Pos = UDim2.fromOffset(10, 10),
             Size = UDim2.fromOffset(20, 20),
             Color = "DimIcon",
             Z = 4
         })
-
-        Items.Label = MakeText({
-            Parent = Items.Row.Instance,
-            Text = Tab.Name,
-            TextSize = 15,
-            Anchor = Vector2.new(0, 0.5),
-            Pos = UDim2.new(0, 36, 0.5, 0),
-            Size = UDim2.fromOffset(TextW + 8, 20),
-            Color = "Text",
-            Z = 4
-        })
-
-        SetRest(Items.Label.Instance, "TextTransparency", 1)
-
-        local function SyncTabWidth()
-            local Bounds = math.ceil(Items.Label.Instance.TextBounds.X)
-            if Bounds <= 0 then return end
-
-            Tab.ExpandedW = 36 + Bounds + 14
-            Items.Label.Instance.Size = UDim2.fromOffset(Bounds + 8, 20)
-
-            Window:LayoutRail(true)
-        end
-
-        Library:Connect(Items.Label.Instance:GetPropertyChangedSignal("TextBounds"), SyncTabWidth)
 
         Items.Hit = MakeButton({
             Parent = Items.Row.Instance,
@@ -3296,7 +3272,11 @@ local Library = { } do
             Tab.Active = Active
 
             Library:StampResting(Items.Row.Instance, "BackgroundTransparency", Active and 0 or 1)
-            Library:StampResting(Items.Label.Instance, "TextTransparency", Active and 0 or 1)
+
+            if Items.BarShadow then
+                Library:StampResting(Items.BarShadow, "Transparency", Active and 0 or 1)
+                Items.BarShadow.Transparency = Active and 0 or 1
+            end
 
             Items.Icon:ChangeItemTheme({ ImageColor3 = Active and "Accent" or "DimIcon" })
             Items.Icon:Tween({
@@ -3304,9 +3284,8 @@ local Library = { } do
             })
 
             Items.Row:Tween({ BackgroundTransparency = Active and 0 or 1 })
-            Items.Label:Tween({ TextTransparency = Active and 0 or 1 })
-
-            Window:LayoutRail()
+            -- [MODIFIED] bar horizontal: lebar 16 saat aktif
+            Items.Bar:Tween({ Size = UDim2.fromOffset(Active and 16 or 0, 3) })
         end
 
         Items.Row:OnHover(function()
@@ -3357,7 +3336,7 @@ local Library = { } do
         end)
 
         table.insert(Window.Tabs, Tab)
-        Window:LayoutRail(true)
+        Window:LayoutRail()
 
         if #Window.Tabs == 1 then
             Window.Current = Tab
